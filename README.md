@@ -4,6 +4,11 @@ This is a small experimental sketch I made for fun, messing around with procedur
 
 ---
 
+<img width="946" height="661" alt="image" src="https://github.com/user-attachments/assets/a30f4a60-03ff-45cd-8494-1c7e9156a809" />
+
+
+---
+
 ## Overview
 
 The snake is made of a series of connected points, each representing a segment of the body. The movement is entirely procedural:
