@@ -1,200 +1,255 @@
-let distance = 20;
-let n = 35;
-let sizes = [];
-let points = [];
-let conns = [];
-let dirs = [];
-let eye1pos;
-let eye2pos;
-let maxTurn; // smaller = stiffer body
+// =============================
+// Configuration
+// =============================
+let segmentDistance = 20;
+let segmentCount = 35;
 
+let segmentSizes = [];
+let spinePoints = [];
+let segmentDirections = [];
 
+let leftEyePosition;
+let rightEyePosition;
+
+let maxTurnAngle; // smaller = stiffer body
+
+// =============================
+// Setup
+// =============================
 function setup() {
-  for (let i = 0; i <= n; i++) {
-    if (i == 0) {
-      sizes[i] = 23;
+    // Define body segment sizes
+    for (let i = 0; i <= segmentCount; i++) {
+        if (i === 0) segmentSizes[i] = 23; // head base
+        if (i === 1) segmentSizes[i] = 27; // head bulge
+        if (i === 2) segmentSizes[i] = 20; // neck
+        if (i > 2 && i < segmentCount) segmentSizes[i] = 17; // body
+        if (i === segmentCount) segmentSizes[i] = 15; // tail tip
     }
-    if (i == 1) {
-      sizes[i] = 27;
+
+    colorMode(HSB);
+    createCanvas(1250, 600);
+
+    maxTurnAngle = radians(25);
+
+    // Initialize spine points
+    spinePoints[0] = createVector(0, 0);
+
+    for (let i = 1; i <= segmentCount; i++) {
+        spinePoints[i] = createVector(0.01, 0.01);
     }
-    if (i == 2) {
-      sizes[i] = 20; //help
-    }
-    if (i > 2 && i < n) {
-      sizes[i] = 17;
-    }
-    if (i == n) {
-      sizes[i] = 15;
-    }
-  }
-  colorMode(HSB);
-  createCanvas(1250, 600);
-  maxTurn = radians(25);
-  points[0] = createVector(0, 0);
-  for (let i = 1; i <= n; i++) {
-    points[i] = createVector(0.01, 0.01);
-  }
-  eye1pos = createVector(0.01, 0.01);
-  eye2pos = createVector(0.01, 0.01);
+
+    leftEyePosition = createVector(0.01, 0.01);
+    rightEyePosition = createVector(0.01, 0.01);
 }
 
+// =============================
+// Main Draw Loop
+// =============================
 function draw() {
-  background(200, 40, 50);
-  points[0].set(mouseX, mouseY);
-  for (let i = 0; i < points.length - 1; i++) {
-    // Get desired direction (from point[i] to old point[i+1])
-    let desired = p5.Vector.sub(points[i + 1], points[i]).normalize();
+    background(200, 40, 50);
 
-    if (i > 0) {
-      let angleDiff = desired.heading() - dirs[i - 1].heading();
-      angleDiff = atan2(sin(angleDiff), cos(angleDiff));
-      angleDiff = constrain(angleDiff, -maxTurn, maxTurn);
-      dirs[i] = dirs[i - 1].copy().rotate(angleDiff);
+    // Head follows mouse
+    spinePoints[0].set(mouseX, mouseY);
+
+    // Update body physics
+    for (let i = 0; i < spinePoints.length - 1; i++) {
+        // Desired direction toward previous position
+        let desiredDirection = p5.Vector.sub(
+            spinePoints[i + 1],
+            spinePoints[i],
+        ).normalize();
+
+        if (i > 0) {
+            let angleDifference =
+                desiredDirection.heading() - segmentDirections[i - 1].heading();
+
+            angleDifference = atan2(sin(angleDifference), cos(angleDifference));
+
+            angleDifference = constrain(
+                angleDifference,
+                -maxTurnAngle,
+                maxTurnAngle,
+            );
+
+            segmentDirections[i] = segmentDirections[i - 1]
+                .copy()
+                .rotate(angleDifference);
+        } else {
+            segmentDirections[i] = desiredDirection;
+        }
+
+        // Position next segment
+        spinePoints[i + 1].set(
+            spinePoints[i].x + segmentDirections[i].x * segmentDistance,
+            spinePoints[i].y + segmentDirections[i].y * segmentDistance,
+        );
     }
-    else {
-      dirs[i] = desired;
-    }
-    points[i + 1].set(points[i].x + dirs[i].x * distance,
-                      points[i].y + dirs[i].y * distance);
-  }
-  strokeWeight(1.5);
 
-  stroke(100);
-  noFill()
-  bodyVertices()
+    // Draw body outline
+    strokeWeight(1.5);
+    stroke(100);
+    noFill();
+    drawBodyShape();
 
-  fill(150, 50, 70);
-  noStroke();
-  bodyVertices();
+    // Fill body
+    fill(150, 50, 70);
+    noStroke();
+    drawBodyShape();
 
-  strokeWeight(10);
-  stroke(100)
-  point(eye1pos.x, eye1pos.y);
-  point(eye2pos.x, eye2pos.y);
+    // Draw eyes
+    strokeWeight(10);
+    stroke(100);
+    point(leftEyePosition.x, leftEyePosition.y);
+    point(rightEyePosition.x, rightEyePosition.y);
 
-  // strokeWeight(1);
-  // stroke(70);
-  // noFill();
-  // drawCircles()
-
-  // strokeWeight(3);
-  // drawSpine();
+    // Debug options
+    // drawCircles();
+    // drawSpine();
 }
 
-function bodyVertices() {
-  beginShape();
-  for (let i = 0; i < points.length; i++) {
-    if (i < points.length - 1) {
-      if (i == 0) {
-        eye1pos.set(
-          points[i].x + (sizes[i] * 0.65) * cos(Math.atan2(dirs[i].y, dirs[i].x)
-          - PI * (2 / 3)),
-          points[i].y + (sizes[i] * 0.65) * sin(Math.atan2(dirs[i].y, dirs[i].x)
-          - PI * (2 / 3))
-        );
-        eye2pos.set(
-          points[i].x + (sizes[i] * 0.65) * cos(Math.atan2(dirs[i].y, dirs[i].x)
-          + PI * (2 / 3)),
-          points[i].y + (sizes[i] * 0.65) * sin(Math.atan2(dirs[i].y, dirs[i].x)
-          + PI * (2 / 3))
-        );
+// =============================
+// Body Shape Construction
+// =============================
+function drawBodyShape() {
+    beginShape();
 
-        // head right side rounding point
-        vertex(
-          points[i].x +
-          sizes[i] * cos(Math.atan2(dirs[i].y, dirs[i].x) - PI * (3 / 4)),
-          points[i].y +
-          sizes[i] * sin(Math.atan2(dirs[i].y, dirs[i].x) - PI * (3 / 4))
-        );
+    // ---------- Forward pass (left side) ----------
+    for (let i = 0; i < spinePoints.length; i++) {
+        if (i < spinePoints.length - 1) {
+            let headingAngle = Math.atan2(
+                segmentDirections[i].y,
+                segmentDirections[i].x,
+            );
 
-        // head center rounding point
-        vertex(
-          points[i].x + sizes[i] * cos(Math.atan2(dirs[i].y, dirs[i].x) + PI),
-          points[i].y + sizes[i] * sin(Math.atan2(dirs[i].y, dirs[i].x) + PI)
-        );
+            if (i === 0) {
+                // Eye positions
+                leftEyePosition.set(
+                    spinePoints[i].x +
+                        segmentSizes[i] *
+                            0.65 *
+                            cos(headingAngle - PI * (2 / 3)),
+                    spinePoints[i].y +
+                        segmentSizes[i] *
+                            0.65 *
+                            sin(headingAngle - PI * (2 / 3)),
+                );
 
-        // head left side rounding point
-        vertex(
-          points[i].x +
-          sizes[i] * cos(Math.atan2(dirs[i].y, dirs[i].x) + PI * (3 / 4)),
-          points[i].y +
-          sizes[i] * sin(Math.atan2(dirs[i].y, dirs[i].x) + PI * (3 / 4))
-        );
-      }
-      // all points main body shape point on the left side
-      // or something idfk i have a DM quiz tomorrow morning
-      // that i should probably study for right now
-      vertex(
-        points[i].x + sizes[i] * cos(Math.atan2(dirs[i].y, dirs[i].x) + PI / 2),
-        points[i].y + sizes[i] * sin(Math.atan2(dirs[i].y, dirs[i].x) + PI / 2)
-      );
+                rightEyePosition.set(
+                    spinePoints[i].x +
+                        segmentSizes[i] *
+                            0.65 *
+                            cos(headingAngle + PI * (2 / 3)),
+                    spinePoints[i].y +
+                        segmentSizes[i] *
+                            0.65 *
+                            sin(headingAngle + PI * (2 / 3)),
+                );
+
+                // Head rounding points
+                vertex(
+                    spinePoints[i].x +
+                        segmentSizes[i] * cos(headingAngle - PI * (3 / 4)),
+                    spinePoints[i].y +
+                        segmentSizes[i] * sin(headingAngle - PI * (3 / 4)),
+                );
+
+                vertex(
+                    spinePoints[i].x + segmentSizes[i] * cos(headingAngle + PI),
+                    spinePoints[i].y + segmentSizes[i] * sin(headingAngle + PI),
+                );
+
+                vertex(
+                    spinePoints[i].x +
+                        segmentSizes[i] * cos(headingAngle + PI * (3 / 4)),
+                    spinePoints[i].y +
+                        segmentSizes[i] * sin(headingAngle + PI * (3 / 4)),
+                );
+            }
+
+            // Left side body point
+            vertex(
+                spinePoints[i].x + segmentSizes[i] * cos(headingAngle + PI / 2),
+                spinePoints[i].y + segmentSizes[i] * sin(headingAngle + PI / 2),
+            );
+        }
+
+        // ---------- Tail rounding ----------
+        if (i === spinePoints.length - 1) {
+            let tailHeading = Math.atan2(
+                segmentDirections[i - 1].y,
+                segmentDirections[i - 1].x,
+            );
+
+            vertex(
+                spinePoints[i].x + segmentSizes[i] * cos(tailHeading + PI / 2),
+                spinePoints[i].y + segmentSizes[i] * sin(tailHeading + PI / 2),
+            );
+
+            vertex(
+                spinePoints[i].x +
+                    segmentSizes[i] * cos(tailHeading + PI * (1 / 4)),
+                spinePoints[i].y +
+                    segmentSizes[i] * sin(tailHeading + PI * (1 / 4)),
+            );
+
+            vertex(
+                spinePoints[i].x + segmentSizes[i] * cos(tailHeading),
+                spinePoints[i].y + segmentSizes[i] * sin(tailHeading),
+            );
+
+            vertex(
+                spinePoints[i].x +
+                    segmentSizes[i] * cos(tailHeading - PI * (1 / 4)),
+                spinePoints[i].y +
+                    segmentSizes[i] * sin(tailHeading - PI * (1 / 4)),
+            );
+        }
     }
-    if (i == points.length - 1) {
-      // last point in tail main body point on the left
-      vertex(
-        points[i].x +
-        sizes[i] * cos(Math.atan2(dirs[i - 1].y, dirs[i - 1].x) + PI / 2),
-        points[i].y +
-        sizes[i] * sin(Math.atan2(dirs[i - 1].y, dirs[i - 1].x) + PI / 2)
-      );
-      // tail right side rounding point
-      vertex(
-        points[i].x +
-        sizes[i] *
-        cos(Math.atan2(dirs[i - 1].y, dirs[i - 1].x) + PI * (1 / 4)),
-        points[i].y +
-        sizes[i] *
-        sin(Math.atan2(dirs[i - 1].y, dirs[i - 1].x) + PI * (1 / 4))
-      );
 
-      // tail center rounding point
-      vertex(
-        points[i].x + sizes[i] * cos(Math.atan2(dirs[i - 1].y, dirs[i - 1].x)),
-        points[i].y + sizes[i] * sin(Math.atan2(dirs[i - 1].y, dirs[i - 1].x))
-      );
+    // ---------- Backward pass (right side) ----------
+    for (let i = spinePoints.length - 1; i >= 0; i--) {
+        if (i > 0) {
+            let headingAngle = Math.atan2(
+                segmentDirections[i - 1].y,
+                segmentDirections[i - 1].x,
+            );
 
-      // tail left side rounding point
-      vertex(
-        points[i].x +
-        sizes[i] *
-        cos(Math.atan2(dirs[i - 1].y, dirs[i - 1].x) - PI * (1 / 4)),
-        points[i].y +
-        sizes[i] *
-        sin(Math.atan2(dirs[i - 1].y, dirs[i - 1].x) - PI * (1 / 4))
-      );
+            vertex(
+                spinePoints[i].x + segmentSizes[i] * cos(headingAngle - PI / 2),
+                spinePoints[i].y + segmentSizes[i] * sin(headingAngle - PI / 2),
+            );
+        } else {
+            let headingAngle = Math.atan2(
+                segmentDirections[i].y,
+                segmentDirections[i].x,
+            );
+
+            vertex(
+                spinePoints[i].x + segmentSizes[i] * cos(headingAngle - PI / 2),
+                spinePoints[i].y + segmentSizes[i] * sin(headingAngle - PI / 2),
+            );
+        }
     }
-  }
 
-  for (let i = points.length - 1; i >= 0; i--) {
-    if (i > 0) {
-      // all points main body shape point on the right side minus the head
-      vertex(
-        points[i].x +
-        sizes[i] * cos(Math.atan2(dirs[i - 1].y, dirs[i - 1].x) - PI / 2),
-        points[i].y +
-        sizes[i] * sin(Math.atan2(dirs[i - 1].y, dirs[i - 1].x) - PI / 2)
-      );
-    } else if (i == 0) {
-      // head's main body right shape point
-      vertex(
-        points[i].x + sizes[i] * cos(Math.atan2(dirs[i].y, dirs[i].x) - PI / 2),
-        points[i].y + sizes[i] * sin(Math.atan2(dirs[i].y, dirs[i].x) - PI / 2)
-      );
-    }
-  }
-  endShape(CLOSE);
+    endShape(CLOSE);
 }
 
+// =============================
+// Debug Helpers
+// =============================
 function drawCircles() {
-  for (let i = 0; i < points.length; i++) {
-    ellipse(points[i].x, points[i].y, sizes[i] * 2);
-  }
+    for (let i = 0; i < spinePoints.length; i++) {
+        ellipse(spinePoints[i].x, spinePoints[i].y, segmentSizes[i] * 2);
+    }
 }
 
 function drawSpine() {
-  for (let i = 0; i < points.length; i++) {
-    if (i <= (points.length-2)){
-      line(points[i].x, points[i].y, points[i+1].x, points[i+1].y)
+    for (let i = 0; i < spinePoints.length - 1; i++) {
+        line(
+            spinePoints[i].x,
+            spinePoints[i].y,
+            spinePoints[i + 1].x,
+            spinePoints[i + 1].y,
+        );
     }
-  }
 }
