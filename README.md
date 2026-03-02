@@ -99,6 +99,6 @@ Even though this was just a small, casual project, the system could be extended 
 
 * Add features like fins and tails for a procedural fish.
 * Add legs using simple inverse kinematics for lizards or quadrupeds.
-* Make something a bit more mechanical like a train.
+* Make something a bit more mechanical like chains or trains.
 * Change segment widths dynamically to create different body shapes.
 * Experiment with multiple chains for more complicated creatures.
